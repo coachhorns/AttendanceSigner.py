@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>PDF Signer</title>
+    <!-- Import the Lato font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato&display=swap">
+
+    <style>
+        body {
+            /* Dark background and white text */
+            background-color: #343433;
+            color: #ffffff;
+
+            /* Use Lato font */
+            font-family: 'Lato', sans-serif;
+
+            /* Center content */
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        /* Make the logo and header closer */
+        img.school-logo {
+            width: 500px;         /* Logo width */
+            display: block;       /* Center the image */
+            margin: 0 auto -150px;  /* 10px bottom margin instead of letting default spacing push them apart */
+        }
+
+        h1 {
+            margin-top: 0;        /* Remove top margin on the header */
+        }
+
+        /* Drag & drop container */
+        #drop-area {
+            border: 2px dashed #ffffff;   /* White border */
+            border-radius: 10px;
+            width: 300px;
+            height: 200px;
+            margin: 20px auto;
+            padding: 20px;
+            cursor: pointer;
+            position: relative;
+            background-color: #343433;    /* Match body background */
+        }
+
+        /* Highlight border on drag over */
+        #drop-area.hover {
+            border-color: #cccccc;
+        }
+
+        /* Hide the file input, replaced by button & drop area */
+        #fileElem {
+            display: none;
+        }
+
+        /* Upload button style */
+        #button {
+            margin-top: 10px;
+            background-color: #ffffff;
+            color: #343433;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: inherit;       /* Use Lato */
+        }
+
+        /* Button hover effect */
+        #button:hover {
+            background-color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+    <!-- School logo with small bottom margin to bring it closer to the heading -->
+    <img 
+        src="{{ url_for('static', filename='school_logo.png') }}" 
+        alt="School Logo"
+        class="school-logo"
+    >
+
+    <h1>Orange Vista Teacher Attendance Signer</h1>
+
+    <div id="drop-area">
+        <p>Drag & drop a PDF here</p>
+        <p>— or —</p>
+        <button id="button">Select a PDF</button>
+        <input type="file" id="fileElem" accept="application/pdf">
+    </div>
+
+    <script>
+        const dropArea = document.getElementById('drop-area');
+        const fileElem = document.getElementById('fileElem');
+        const button = document.getElementById('button');
+
+        button.addEventListener('click', () => fileElem.click());
+
+        fileElem.addEventListener('change', (e) => {
+            let files = e.target.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        });
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop area on dragover
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.add('hover'), false);
+        });
+        // Remove highlight on dragleave/drop
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.remove('hover'), false);
+        });
+
+        // Handle dropped files
+        dropArea.addEventListener('drop', (e) => {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        });
+
+        // Upload the file & receive signed PDF
+        function uploadFile(file) {
+            let formData = new FormData();
+            formData.append('pdfFile', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.statusText);
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create a download link & trigger it
+                let url = window.URL.createObjectURL(blob);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = "signed_output.pdf";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+            });
+        }
+    </script>
+</body>
+</html>
